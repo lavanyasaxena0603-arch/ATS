@@ -548,3 +548,5 @@ This is a demonstration project showcasing modern web development techniques and
 ---
 
 **Built with 💙 for the future of recruitment technology**
+---
+Contributor: Gaur-1234
