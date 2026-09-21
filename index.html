@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     
@@ -35,6 +37,12 @@
                 <a href="#" onclick="showSection('landingPage')">Home</a>
                 <a href="#" onclick="showSection('aboutPage')">About</a>
                 <a href="#" onclick="showSection('recruiterDashboard')">Recruiter</a>
+                
+                <div class="nav-profile-container" id="navProfileContainer" onclick="showSection('candidateLogin')" style="cursor: pointer; display: flex; align-items: center; margin-left: 1rem;">
+                    <div id="navProfileContent" style="display: flex; align-items: center; gap: 0.5rem;">
+                        <a href="#" style="color: var(--primary); font-weight: 600;">Login</a>
+                    </div>
+                </div>
             </div>
         </nav>
 
@@ -86,6 +94,29 @@
                     <h3>Smart Analytics</h3>
                     <p>Comprehensive candidate scoring</p>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="aboutPage" class="section">
+        <button class="back-btn" onclick="showSection('landingPage')">
+            <i class="fas fa-arrow-left"></i> Back
+        </button>
+        <div class="container" style="max-width: 800px; margin: 0 auto;">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h2>About AI Recruiter</h2>
+                <p>The next generation of applicant tracking and AI-driven screening.</p>
+            </div>
+            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; box-shadow: var(--shadow);">
+                <h3>Our Mission</h3>
+                <p style="margin-bottom: 1rem; color: var(--text-secondary);">We aim to bridge the gap between talented individuals and forward-thinking companies by streamlining the hiring process with advanced artificial intelligence.</p>
+                <h3>How It Works</h3>
+                <ul style="list-style-type: disc; margin-left: 2rem; color: var(--text-secondary);">
+                    <li style="margin-bottom: 0.5rem;">Intelligent Resume Parsing</li>
+                    <li style="margin-bottom: 0.5rem;">AI-Driven Virtual Interviews</li>
+                    <li style="margin-bottom: 0.5rem;">Smart Candidate Scoring & Matching</li>
+                </ul>
             </div>
         </div>
     </section>
@@ -390,25 +421,84 @@
                     <p>Access your application status</p>
                 </div>
 
-                <form id="candidateLoginForm" class="login-form">
-                    <div class="form-group">
-                        <label><i class="fas fa-envelope"></i> Email</label>
-                        <input type="email" required placeholder="your.email@example.com">
+                <div id="loggedOutView">
+                    <!-- Auth Tabs -->
+                    <div class="auth-tabs" style="display: flex; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border);">
+                        <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')" style="flex: 1; padding: 1rem; border: none; background: transparent; cursor: pointer; font-weight: 600; color: var(--primary); border-bottom: 2px solid var(--primary);">Login</button>
+                        <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')" style="flex: 1; padding: 1rem; border: none; background: transparent; cursor: pointer; font-weight: 600; color: var(--text-secondary);">Sign Up</button>
                     </div>
 
-                    <div class="form-group">
-                        <label><i class="fas fa-lock"></i> Application ID</label>
-                        <input type="text" required placeholder="Enter your application ID">
+                    <!-- Email Login Form -->
+                    <form id="emailLoginForm" class="login-form">
+                        <div class="form-group">
+                            <label><i class="fas fa-envelope"></i> Email</label>
+                            <input type="email" id="loginEmail" required placeholder="your.email@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-lock"></i> Password</label>
+                            <input type="password" id="loginPassword" required placeholder="••••••••">
+                        </div>
+                        <p id="loginError" style="color: var(--danger); font-size: 0.9rem; margin-bottom: 1rem; display: none;"></p>
+                        <button type="submit" class="btn btn-primary btn-large" style="width: 100%; justify-content: center;" id="emailLoginBtn">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                    </form>
+
+                    <!-- Email Signup Form -->
+                    <form id="emailSignupForm" class="login-form" style="display: none;">
+                        <div class="form-group">
+                            <label><i class="fas fa-user"></i> Full Name</label>
+                            <input type="text" id="signupName" required placeholder="Jane Doe">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-envelope"></i> Email</label>
+                            <input type="email" id="signupEmail" required placeholder="your.email@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-lock"></i> Password</label>
+                            <input type="password" id="signupPassword" required placeholder="••••••••">
+                        </div>
+                        <p id="signupError" style="color: var(--danger); font-size: 0.9rem; margin-bottom: 1rem; display: none;"></p>
+                        <button type="submit" class="btn btn-primary btn-large" style="width: 100%; justify-content: center;" id="emailSignupBtn">
+                            <i class="fas fa-user-plus"></i> Sign Up
+                        </button>
+                    </form>
+
+                    <div style="display: flex; align-items: center; margin: 1.5rem 0;">
+                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+                        <span style="padding: 0 1rem; color: var(--text-muted); font-size: 0.9rem;">OR</span>
+                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary btn-large">
-                        <i class="fas fa-sign-in-alt"></i>
-                        Login
+                    <button id="googleLoginBtn" class="btn btn-primary btn-large" style="width: 100%; justify-content: center; background-color: #db4437; border-color: #db4437;">
+                        <i class="fab fa-google"></i>
+                        Continue with Google
                     </button>
-                </form>
+                </div>
 
-                <div class="login-footer">
-                    <p>Don't have an application? <a href="#" onclick="showSection('applicationForm')">Apply Now</a></p>
+                <div id="loggedInView" style="display: none; text-align: center;">
+                    <div style="margin-bottom: 2rem;">
+                        <div id="userAvatarContainer" style="display: flex; justify-content: center; margin-bottom: 1rem;">
+                            <img id="userAvatar" src="" alt="User Avatar" style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--primary); display: none;">
+                            <div id="userInitialsAvatar" style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem; font-weight: 700; border: 3px solid var(--primary); display: none;"></div>
+                        </div>
+                        <h3 id="userName" style="margin-bottom: 0.5rem;"></h3>
+                        <p id="userEmail" style="color: var(--text-secondary);"></p>
+                    </div>
+                    
+                    <div style="background: var(--bg-secondary); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; text-align: left; border: 1px solid var(--border);">
+                        <h4 style="margin-bottom: 1rem; color: var(--primary);"><i class="fas fa-file-alt"></i> Application Status</h4>
+                        <p style="color: var(--text-secondary);">Application status will appear here. (Connect to database to fetch your applications)</p>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="showSection('applicationForm')">
+                            <i class="fas fa-plus"></i> New Application
+                        </button>
+                        <button id="logoutBtn" class="btn btn-secondary">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -516,6 +606,11 @@
             </button>
         </div>
     </div>
+
+    <!-- Footer -->
+    <footer style="text-align: center; padding: 2rem; color: var(--text-secondary); border-top: 1px solid var(--border); background: var(--bg-primary); margin-top: 2rem;">
+        <p>Developed by Lavanya Saxena, Gaurank Verma</p>
+    </footer>
 
     <script src="js/main.js"></script>
 </body>

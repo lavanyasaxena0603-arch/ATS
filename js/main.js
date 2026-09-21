@@ -6,6 +6,14 @@ let chatQuestions = [];
 let currentQuestionIndex = 0;
 let candidateAnswers = {};
 
+// ===== SUPABASE INIT =====
+const supabaseUrl = 'https://jbkhcyhkognalbhsqlxg.supabase.co';
+const supabaseKey = 'sb_publishable_f027DYFYjTft4aWsbsoZKQ_tE1Ik4Mu';
+let supabaseClient = null;
+if (window.supabase) {
+    supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+}
+
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
@@ -15,6 +23,17 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initializeApp() {
+    // Check Auth State
+    if (supabaseClient) {
+        supabaseClient.auth.getSession().then(({ data: { session } }) => {
+            updateAuthUI(session);
+        });
+
+        supabaseClient.auth.onAuthStateChange((_event, session) => {
+            updateAuthUI(session);
+        });
+    }
+
     // Show loading screen
     setTimeout(() => {
         document.getElementById('loadingScreen').classList.add('hidden');
@@ -107,13 +126,180 @@ function setupEventListeners() {
         sortBy.addEventListener('change', filterCandidates);
     }
 
-    // Candidate login
-    const candidateLoginForm = document.getElementById('candidateLoginForm');
-    if (candidateLoginForm) {
-        candidateLoginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            alert('Login functionality is simulated in this demo. In production, this would verify credentials and show application status.');
+    // Candidate login (Google Auth via Supabase)
+    const googleLoginBtn = document.getElementById('googleLoginBtn');
+    if (googleLoginBtn && supabaseClient) {
+        googleLoginBtn.addEventListener('click', async () => {
+            await supabaseClient.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin
+                }
+            });
         });
+    }
+
+    // Email Login
+    const emailLoginForm = document.getElementById('emailLoginForm');
+    if (emailLoginForm && supabaseClient) {
+        emailLoginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorEl = document.getElementById('loginError');
+            
+            const btn = document.getElementById('emailLoginBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+            btn.disabled = true;
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+
+            if (error) {
+                errorEl.textContent = error.message;
+                errorEl.style.display = 'block';
+            } else {
+                errorEl.style.display = 'none';
+                emailLoginForm.reset();
+            }
+        });
+    }
+
+    // Email Signup
+    const emailSignupForm = document.getElementById('emailSignupForm');
+    if (emailSignupForm && supabaseClient) {
+        emailSignupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('signupName').value;
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const errorEl = document.getElementById('signupError');
+            
+            const btn = document.getElementById('emailSignupBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing up...';
+            btn.disabled = true;
+
+            const { data, error } = await supabaseClient.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        full_name: name
+                    }
+                }
+            });
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+
+            if (error) {
+                errorEl.textContent = error.message;
+                errorEl.style.display = 'block';
+            } else {
+                errorEl.style.display = 'none';
+                alert('Signup successful! You can now log in.');
+                switchAuthTab('login');
+                emailSignupForm.reset();
+            }
+        });
+    }
+
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn && supabaseClient) {
+        logoutBtn.addEventListener('click', async () => {
+            await supabaseClient.auth.signOut();
+        });
+    }
+}
+
+// ===== AUTH UI HELPER =====
+window.switchAuthTab = function(tab) {
+    const loginForm = document.getElementById('emailLoginForm');
+    const signupForm = document.getElementById('emailSignupForm');
+    const tabLogin = document.getElementById('tabLogin');
+    const tabSignup = document.getElementById('tabSignup');
+    
+    if (tab === 'login') {
+        loginForm.style.display = 'block';
+        signupForm.style.display = 'none';
+        tabLogin.classList.add('active');
+        tabLogin.style.color = 'var(--primary)';
+        tabLogin.style.borderBottom = '2px solid var(--primary)';
+        tabSignup.classList.remove('active');
+        tabSignup.style.color = 'var(--text-secondary)';
+        tabSignup.style.borderBottom = 'none';
+    } else {
+        loginForm.style.display = 'none';
+        signupForm.style.display = 'block';
+        tabSignup.classList.add('active');
+        tabSignup.style.color = 'var(--primary)';
+        tabSignup.style.borderBottom = '2px solid var(--primary)';
+        tabLogin.classList.remove('active');
+        tabLogin.style.color = 'var(--text-secondary)';
+        tabLogin.style.borderBottom = 'none';
+    }
+}
+
+// ===== AUTH UI =====
+function updateAuthUI(session) {
+    const loggedOutView = document.getElementById('loggedOutView');
+    const loggedInView = document.getElementById('loggedInView');
+    const navProfileContent = document.getElementById('navProfileContent');
+    
+    if (session) {
+        const user = session.user;
+        const name = user.user_metadata?.full_name || user.email.split('@')[0];
+        const avatarUrl = user.user_metadata?.avatar_url;
+        
+        // Update Navbar Profile
+        if (navProfileContent) {
+            let navAvatarHtml = '';
+            if (avatarUrl) {
+                navAvatarHtml = `<img src="${avatarUrl}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--primary);">`;
+            } else {
+                const initial = name.charAt(0).toUpperCase();
+                navAvatarHtml = `<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 2px solid var(--primary);">${initial}</div>`;
+            }
+            navProfileContent.innerHTML = `
+                ${navAvatarHtml}
+                <span style="color: var(--text-primary); font-weight: 500;">${name}</span>
+            `;
+        }
+
+        if (loggedOutView) loggedOutView.style.display = 'none';
+        if (loggedInView) {
+            loggedInView.style.display = 'block';
+            document.getElementById('userName').textContent = name;
+            document.getElementById('userEmail').textContent = user.email;
+            
+            const userAvatar = document.getElementById('userAvatar');
+            const userInitialsAvatar = document.getElementById('userInitialsAvatar');
+            
+            if (avatarUrl) {
+                userAvatar.src = avatarUrl;
+                userAvatar.style.display = 'block';
+                userInitialsAvatar.style.display = 'none';
+            } else {
+                userAvatar.style.display = 'none';
+                userInitialsAvatar.textContent = name.charAt(0).toUpperCase();
+                userInitialsAvatar.style.display = 'flex';
+            }
+        }
+    } else {
+        // Logged Out Navbar Profile
+        if (navProfileContent) {
+            navProfileContent.innerHTML = `<a href="#" style="color: var(--primary); font-weight: 600;">Login</a>`;
+        }
+
+        if (loggedOutView) loggedOutView.style.display = 'block';
+        if (loggedInView) loggedInView.style.display = 'none';
     }
 }
 
